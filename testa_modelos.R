@@ -9,7 +9,6 @@ dados <- read_excel("inmet_cuiaba.xlsx")
 dados <- dados[,-2]
 p_corte <- 0
 
-
 # Converte a coluna 'data' para o formato de data
 dados$data <- as.Date(dados$data)
 
@@ -27,7 +26,7 @@ percentual_dados_validos <- dados %>%
 # Junta os dataframes para filtrar os dados originais com base no percentual de dados válidos
 dados_com_percentual <- inner_join(dados, percentual_dados_validos, by = c("ano", "semana"))
 
-# Filtra para manter apenas os grupos com mais de 75% de dados válidos
+# Filtra para manter apenas os grupos com mais de p_corte de dados válidos
 dados_filtrados <- dados_com_percentual %>%
   filter(if_all(starts_with("x"), ~ . > p_corte)) # Substitua "x" pelo prefixo das colunas de percentual no dataframe
 
@@ -54,7 +53,7 @@ dengue_long$semana <- sapply(dengue_long$ds, function(data) {
 
 dengue_dados_combinados <- inner_join(dengue_long, dados_media, by = c("ano", "semana"))
 
-df_exogeno <- dengue_dados_combinados[, 6:8]
+df_exogeno <- dengue_dados_combinados[, c(6, 7, 10, 11, 18)]
 
 # Converter para série temporal
 dengue_ts <- ts(dengue_dados_combinados$y, 
@@ -67,7 +66,6 @@ results <- data.frame(Combination = character(), AIC = numeric(), stringsAsFacto
 
 # Ajustar um modelo ARIMA sem variáveis exógenas
 model_puro <- auto.arima(dengue_ts,
-                         xreg = exog_data,
                          approximation = FALSE,
                          allowdrift = TRUE,
                          allowmean = TRUE,
@@ -106,3 +104,4 @@ for (i in 1:ncol(df_exogeno)) {
 
 # Ordenar os resultados pelo AIC
 results <- results %>% arrange(AIC)
+write.csv(results, "resultados.csv")
