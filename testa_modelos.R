@@ -53,7 +53,7 @@ dengue_long$semana <- sapply(dengue_long$ds, function(data) {
 
 dengue_dados_combinados <- inner_join(dengue_long, dados_media, by = c("ano", "semana"))
 
-df_exogeno <- dengue_dados_combinados[, c(6, 7, 10, 11, 18)]
+df_exogeno <- dengue_dados_combinados[, c(6, 7, 10, 11, 19)]
 
 # Converter para série temporal
 dengue_ts <- ts(dengue_dados_combinados$y, 
@@ -83,7 +83,7 @@ for (i in 1:ncol(df_exogeno)) {
   comb <- combn(ncol(df_exogeno), i, simplify = FALSE)
   for (vars in comb) {
     exog_data <- as.matrix(df_exogeno[, vars, drop = FALSE])
-    model <- auto.arima(dengue_ts, xreg = exog_data)
+    # model <- auto.arima(dengue_ts, xreg = exog_data)
     
     model <- auto.arima(dengue_ts,
                         xreg = exog_data,
@@ -105,3 +105,30 @@ for (i in 1:ncol(df_exogeno)) {
 # Ordenar os resultados pelo AIC
 results <- results %>% arrange(AIC)
 write.csv(results, "resultados.csv")
+
+# Melhor modelo
+df_exogeno <- dengue_dados_combinados[, c(6, 7, 11)]
+exog_data <- as.matrix(df_exogeno[, 1:3, drop = FALSE])
+
+modelo <- auto.arima(dengue_ts,
+                    xreg = exog_data,
+                    approximation = FALSE,
+                    allowdrift = TRUE,
+                    allowmean = TRUE,
+                    seasonal = TRUE,
+                    stepwise = TRUE,
+                    lambda="auto", 
+                    # trace = TRUE,
+                    ic = c("aic"))
+
+# Gerar previsões com base no modelo ajustado
+previsoes <- forecast(modelo, xreg = exog_data, h = 0)
+
+# Plotar os dados originais
+plot(modelo$x, type = "l", col = "blue", xlab = "Tempo", ylab = "Valores", main = "Série Temporal de Dengue")
+
+# Adicionar a série ajustada pelo modelo
+lines(modelo$fitted, col = "red")
+
+# Legenda
+legend("topright", legend = c("Dados Originais", "Estimativa do Modelo"), col = c("blue", "red"), lty = 1)
